@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ---
-# Title: get_genomic_features_appris.sh
+# Title: get_chm13_appris_features.sh
 # Date: 2025
 # Author: Adam, Carolina L.
 # Purpose: Determine CHM13 genomic features from annotation file (GFF)

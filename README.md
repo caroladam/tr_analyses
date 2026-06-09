@@ -1,5 +1,5 @@
-# tr_analysis
+# Tandem repeat variation within and between species reveals signatures of selection in humans and chimpanzees
 
-This repository contains all code used to analyze the data from "Comparative genomics of Tandem Repeat variation in apes", Adam, C.L. et al. (in prep).
+This repo contains all code used for analyses and generating figures.
 
-Tandem repeat catalog creation, homology assessment and genotyping were performed with the [TRACk pipeline](https://github.com/caroladam/track)
+Tandem repeat catalog creation, homology assessment and genotyping were performed with the [TRACK pipeline](https://github.com/caroladam/track), and full tutorial is available at the tool's manual page.

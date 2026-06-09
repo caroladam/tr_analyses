@@ -69,9 +69,10 @@ porubsky_rates <- t_hsa %>%
 
 # Pivot Porubsky rates to long format for plotting
 porubsky_rates <- porubsky_rates %>%
-  mutate(Porubsky_per_allele = mu_allele) %>%
-  dplyr::select(motif_len, Porubsky_per_allele) %>%
-  pivot_longer(cols = c("Porubsky_per_allele"), 
+  mutate(Porubsky_per_event = mu,
+         Porubsky_per_allele = mu_allele) %>%
+  dplyr::select(motif_len, Porubsky_per_event, Porubsky_per_allele) %>%
+  pivot_longer(cols = c("Porubsky_per_event","Porubsky_per_allele"), 
                names_to = "type", values_to = "mu")
 
 t_data <- t %>% 
@@ -166,8 +167,8 @@ nei_stats_sum <- nei_stats %>%
                 mutate(Ds = -log(Jxy/sqrt(Jx*Jy)))
 
 # Mutation rate estimates normalized by branch lengths
-branch_len_HSA = 6.2e6/28
-branch_len_PTR = 6.2e6/25
+branch_len_HSA = 7.73e6/29
+branch_len_PTR = 7.73e6/25
 branch_len_total = branch_len_PTR + branch_len_HSA
 
 filt_du_stats <- du_stats %>% filter(!is.na(ASD))
@@ -224,17 +225,21 @@ all_rates_filtered <- all_rates %>% filter(type %in% c("porubsky_rates", "summar
 # Plot mutation rates per motif length
 g <- ggplot(all_rates_filtered %>% filter(motif_len<50))
 g + geom_point(aes(x=motif_len, y=mu, color=type)) +
-    geom_line(aes(x=motif_len, y=mu, color=type, linetype= type)) +
+    geom_line(aes(x=motif_len, y=mu, color=type, linewidth = type), linetype= "solid", show.legend = FALSE) +
 theme_bw() +
     scale_y_log10("Mutation rate / generation") +
     scale_x_continuous("Motif length (bp)") +
-    scale_color_viridis_d() +
-    scale_linetype_manual(values = c("solid", "dashed")) +
-    scale_size_manual(values = c(0.5,1.5)) +
+    scale_color_manual(values = c("delta_mu2" = "#440154", "Porubsky_per_event" = "#95d840"),
+        labels = c("delta_mu2" = "genetic distance_based (d)", "Porubsky_per_event" = "de novo (Porubsky et al. 2025)")) +
+    scale_linewidth_manual(values = c("delta_mu2" = 1, "Porubsky_per_event" = 0.5)) +
 theme(axis.line = element_line(linewidth=1, colour = "black"),
 panel.border = element_blank(), panel.background = element_blank(),
-text = element_text(size=18),
-axis.title.x=element_text(size= 16),
-axis.title.y=element_text(size = 16),
-axis.text.x=element_text(colour="black", size = 16),
-axis.text.y=element_text(colour="black", size = 16))
+text = element_text(size=7, family = "Helvetica"),
+axis.title.x=element_text(size= 6, family = "Helvetica"),
+axis.title.y=element_text(size = 6, family = "Helvetica"),
+panel.grid.major = element_blank(),
+panel.grid.minor = element_blank(),
+axis.text.x=element_text(colour="black", size = 6, family = "Helvetica"),
+axis.text.y=element_text(colour="black", size = 6, family = "Helvetica"),
+legend.position = c(0.9, 0.1),
+legend.background = element_rect(fill = scales::alpha("white", 0.7), colour = NA))

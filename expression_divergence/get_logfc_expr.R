@@ -1,5 +1,5 @@
 # ---
-# Title: expression_divergence.R
+# Title: get_logfc_expr.R
 # Date: 2025
 # Author: Adam, Carolina L.
 # Purpose: Calculate log2 fold-change expression divergence

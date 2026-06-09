@@ -16,44 +16,25 @@ library(dplyr)
 library(stringr)
 library(ggsignif)
 
-df <- read.table("homo_pantro_df_heteroz.txt", header= F)
+df <- read.table("homo_pantro_heteroz.txt", header= T)
 
 df <- df %>%
-  mutate(gc_content = str_count(toupper(V7), "[GC]") / str_length(V7) * 100)
+  mutate(gc_content = str_count(toupper(motif_seq), "[GC]") / str_length(motif_seq) * 100)
 
 df <- df %>%
-  mutate(V9 = case_when(
-    V6 %in% 1:6 ~ as.character(V6),
-    V6 >= 7 & V6 <= 20 ~ "7-20",
-    V6 >= 21 & V6 <= 30 ~ "21-30", 
-    V6 >= 31 & V6 <= 40 ~ "31-40",
-    V6 >= 41 & V6 <= 50 ~ "41-50",
-    V6 >= 51 & V6 <= 100 ~ "51-100",
-    V6 > 100 ~ ">100")) %>%
-  mutate(V9 = factor(V9, levels = c(
+  mutate(motif_cat = case_when(
+    motif_len %in% 1:6 ~ as.character(motif_len),
+    motif_len >= 7 & motif_len <= 20 ~ "7-20",
+    motif_len >= 21 & motif_len <= 30 ~ "21-30", 
+    motif_len >= 31 & motif_len <= 40 ~ "31-40",
+    motif_len >= 41 & motif_len <= 50 ~ "41-50",
+    motif_len >= 51 & motif_len <= 100 ~ "51-100",
+    motif_len > 100 ~ ">100")) %>%
+  mutate(motif_cat = factor(motif_cat, levels = c(
     as.character(1:6), "7-20", "21-30", "31-40", "41-50", "51-100", "101-200", ">100")))
 
 df <- df %>%
-  mutate(V10 = interaction(V1, V5, sep = "_"))
-
-df <- df %>%
-  rename(
-    spp = V1,
-    tr_id = V2,
-    Ho = V3,
-    He = V4,
-    patogenic = V5,
-    motif_size = V6,
-    motif_seq = V7,
-    feature = V8,
-    GC = gc_content,
-    motif_cat = V9,
-    spp_pat_status = V10) %>%
-  mutate(
-    feature = as.factor(feature),
-    spp = as.factor(spp),
-    motif_size = as.numeric(motif_size),
-    GC = as.numeric(GC))
+  mutate(spp_pat_status = interaction(spp, pathogenic_status, sep = "_"))
 
 mycolors=c('homo'='#5C608A','chimp'='#8A865D')
 

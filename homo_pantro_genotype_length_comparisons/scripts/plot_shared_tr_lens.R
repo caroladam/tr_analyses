@@ -17,14 +17,47 @@ library(tidyr)
 library(stringr)
 library(ggrastr)
 
-df<-read.table("human_chimp_avg_len.bed")
+df<-read.table("homo_pantro_homolog_trs.txt")
 
 color_mapping <- c("cds" = "darkgoldenrod1", "promoter" = "dodgerblue", "5utr" = "firebrick", "3utr" = "coral1", "intron"= "mediumseagreen", "intergenic" = "darkviolet")
 
 df <- df %>% arrange(factor(feature, levels = c("intergenic", "intron", "promoter", "cds", "3utr", "5utr")))
 
+# Absolute diff between species
+df <- df %>%
+mutate(abs_len_diff = abs(as.numeric(hsa_mean_len) - as.numeric(ptr_mean_len)))
+
+# Filter more divergent TRs based on percentage per feature (0.001%)
+df_filtered <- df %>%
+  group_by(feature) %>%
+  filter(abs_len_diff <= quantile(abs_len_diff, 0.99999)) %>%
+  ungroup()
+
+results <- df %>%
+  group_by(feature) %>%
+  summarise(
+    r_squared = summary(lm(ptr_mean_len ~ hsa_mean_len))$r.squared,
+    p_value = summary(lm(ptr_mean_len ~ hsa_mean_len))$coefficients[2, 4], .groups = "drop") %>%
+  mutate(
+    dataset = "raw")
+
+results_f <- df_filtered %>%
+  group_by(feature) %>%
+  summarise(
+    r_squared = summary(lm(ptr_mean_len ~ hsa_mean_len))$r.squared,
+    p_value = summary(lm(ptr_mean_len ~ hsa_mean_len))$coefficients[2, 4], .groups = "drop") %>%
+  mutate(
+    dataset = "filtered")
+
+combined_results <- bind_rows(results, results_f) %>%
+  mutate(
+    r_squared = round(r_squared, 3),
+    p_adj = p.adjust(p_value, method = "fdr"))
+
+write.table(combined_results, "cor_test_homo_ptr_mean_lens.txt", col.names=T, row.names=F, sep="\t", quote=F)
+
 # Main plot
-p <- ggplot(df, aes(x = homo_len, y = pantro_len, colour = feature)) + 
+p <- ggplot(df, aes(x = hsa_mean_len, y = ptr_mean_len, colour = feature)) + 
   geom_abline(linewidth=2, slope = 1, intercept = 0, color = "black") +
   #scale_x_continuous(breaks=c(10,50,100,500,1000,2000,5000,10000), trans="log1p", name = "Human mean TR allele length") +
   #scale_y_continuous(breaks=c(10,50,100,500,1000,2000,5000,10000), trans="log1p", name = "Chimpanzee mean TR allele length") +
@@ -45,8 +78,8 @@ axis.text.y=element_text(colour="black", size=7, family="Helvetica"))
 plot_category_with_ci <- function(category, color) {
   cat_data <- df[df$feature == category, ]
   list(
-    rasterize(geom_linerange(data = cat_data, aes(ymin = pantro_p5, ymax = pantro_p95), color = color, alpha = 0.5, show.legend = FALSE), dpi=500),
-    rasterize(geom_linerange(data = cat_data, aes(xmin = homo_p5, xmax = homo_p95), color = color, alpha = 0.5, show.legend = FALSE), dpi=500),
+    rasterize(geom_linerange(data = cat_data, aes(ymin = ptr_5p, ymax = ptr_95p), color = color, alpha = 0.5, show.legend = FALSE), dpi=500),
+    rasterize(geom_linerange(data = cat_data, aes(xmin = homo_5p, xmax = homo_95p), color = color, alpha = 0.5, show.legend = FALSE), dpi=500),
     ggrastr::geom_point_rast(data = cat_data, size = 2, alpha = 0.4, color = color, shape = 16, raster.dpi = 500, show.legend = FALSE),
     geom_smooth(data = cat_data, method = "lm", color = color, linewidth = 1, alpha = 0.8, se = FALSE))}
 
@@ -62,7 +95,7 @@ p <- p +
 ggsave("human_chimp_avg_len.pdf", plot = p, device = cairo_pdf, width = 6, height = 6)
 
 ## Heatmap
-p <- ggplot(df, aes(x = homo_len, y = pantro_len)) + 
+p <- ggplot(df, aes(x = hsa_mean_len, y = ptr_mean_len)) + 
     geom_hex(bins = 50, aes(fill = after_stat(count), alpha = after_stat(count)), show.legend=F) +
     scale_fill_viridis_c(option = "F", direction=-1, name = "Density (log)", trans="log10") +
     scale_alpha_continuous(range = c(0.8, 1), guide = "none") +
@@ -85,21 +118,21 @@ ggsave("human_chimp_avg_len_heatmap.pdf", plot = p, device = cairo_pdf, width = 
 # Plot within-species variance x mean allele len divergence between species
 df <- df %>%
   mutate(
-    slope = homo_len - pantro_len,
+    slope = hsa_mean_len - ptr_mean_len,
     direction = case_when(
       slope > 0  ~ "human_exp",
       slope < 0  ~ "chimp_exp",
       TRUE       ~ "zero"))
 
-df<-df%>%mutate(homo_central_90 = homo_p95 - homo_p5)
-df<-df%>%mutate(chimp_central_90 = pantro_p95 - pantro_p5)
+df<-df%>%mutate(homo_central_90 = homo_95p - homo_5p)
+df<-df%>%mutate(chimp_central_90 = ptr_95p - ptr_5p)
 
 df <- df %>%
   mutate(
-    mean_length = (homo_len + pantro_len) / 2,
-    relative_diff = abs(homo_len - pantro_len) / mean_length)
+    mean_length = (hsa_mean_len + ptr_mean_len) / 2,
+    relative_diff = abs(hsa_mean_len - ptr_mean_len) / mean_length)
 
-df<-df%>%mutate(relative_var = homo_var/homo_len)
+df<-df%>%mutate(relative_var = homo_var/hsa_mean_len)
 
 # highlight trait-associated TRs
 trait <- df[df$id %in% c("MUC1", "ACAN", "TCHH", "TENT5A", "MACF1", "RRBP1", "SPDYE3", "KRTAP5-1", "KRTAP5-5", "NACA", "PDZD7", "PHETA1", "PHGR1", "PPP1R15A", "RERE", "TNFRSF10C", "GIGYF2", "ZNF470", "IRF5", "CCDC40", "UBC", "CLEC4M", "MUC21", "MUC22", "ABCD3", "AFF2", "AR", "ARX1", "ARX2", "ATN1", "ATXN1", "ATXN10", "ATXN2", "ATXN3", "ATXN7", "ATXN8OS", "BEAN1","C9ORF72", "CACNA1A", "CBL", "CNBP", "COMP", "CSTB", "DAB1", "DIP2B", "DMD", "EIF4A3", "FGF14", "FMR1", "FOXL2", "FXN", "GIPC1", "GLS", "HOXA131", "HOXA132", "HOXA133", "HOXD13", "HTT", "JPH3", "LRP12", "MARCHF6", "NIPA1", "NOP56", "NOTCH2NLC", "NUTM2B", "PABPN1", "PHOX2B", "PPP2R2B", "PRDM12", "PRNP", "RAPGEF2", "RILPL1", "RUNX2", "SAMD12", "SOX3", "TBP", "TBX1", "TCF4", "THAP11", "TNRC6A", "XYLT1", "YEATS2", "ZFHX3", "ZIC2","ZIC3"), ]

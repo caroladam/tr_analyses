@@ -17,7 +17,15 @@ library(patchwork)
 library(viridis)
 
 # input
-input_main_file <- "all_categories_intersect.txt"
+input_main_file <- "tr_variance_ratios_eps_1_variable.txt"
+
+# calculate Pearson and Spearman cor for human and chimp ratios
+results <- data.frame(
+  Method = c("Pearson", "Spearman"),
+  Correlation = round(
+    c(unname(pearson$estimate), unname(spearman$estimate)),3), P_value = format.pval(c(pearson$p.value, spearman$p.value)))
+
+write.table(results, "cor_tests_homo_pantro_ratios.txt", col.names=T, row.names=F, sep="\t", quote=F)
 
 # outliers
 highlight_trids <- c("TR1334497", "TR140813")
